@@ -5,28 +5,31 @@ import cv2
 import os
 import tempfile
 
-# ===================== Page Config =====================
+# ---------------- Page Config ----------------
 
 st.set_page_config(
     page_title="FakeProof - Deepfake Detection",
     layout="wide"
 )
 
-# ===================== Load Model =====================
+# ---------------- Load Model ----------------
 
 @st.cache_resource
 def load_trained_model():
-    return tf.keras.models.load_model("model/deepfake_video_model.h5")
+    return tf.keras.models.load_model(
+        "model/deepfake_video_model.h5",
+        compile=False
+    )
 
 model = load_trained_model()
 
-# ===================== Constants =====================
+# ---------------- Constants ----------------
 
 IMG_SIZE = 224
 MAX_SEQ_LENGTH = 20
 NUM_FEATURES = 2048
 
-# ===================== Feature Extractor =====================
+# ---------------- Feature Extractor ----------------
 
 @st.cache_resource
 def build_feature_extractor():
@@ -46,7 +49,7 @@ def build_feature_extractor():
 
 feature_extractor = build_feature_extractor()
 
-# ===================== Video Processing =====================
+# ---------------- Video Processing ----------------
 
 def crop_center_square(frame):
     y, x = frame.shape[0:2]
@@ -87,22 +90,23 @@ def prepare_single_video(frames):
         length = min(MAX_SEQ_LENGTH, video_length)
 
         for j in range(length):
-            frame_features[i, j, :] = feature_extractor.predict(batch[None, j, :], verbose=0)
+            frame_features[i, j, :] = feature_extractor.predict(
+                batch[None, j, :], verbose=0
+            )
 
         frame_mask[i, :length] = 1
 
     return frame_features, frame_mask
 
-# ===================== UI =====================
+# ---------------- UI Styling ----------------
 
-# Background Image Styling
 st.markdown(
     """
     <style>
     .stApp {
-        background: url("https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/YOUR_REPO/main/static/ai_face.png");
+        background: url("https://raw.githubusercontent.com/DeepakKumar29th/Fakeproof-Deepfake-Detector/main/static/ai_face.png");
         background-size: cover;
-        background-position: center;
+        background-position: center right;
         background-repeat: no-repeat;
     }
     </style>
@@ -110,44 +114,72 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.markdown("<h1 style='text-align:center;'>FAKEPROOF: DETECTS DEEPFAKE VIDEOS</h1>", unsafe_allow_html=True)
-st.markdown("<h3 style='text-align:center; color:#f1c40f; font-weight:bold;'>AI vs AI: Fighting deception with detection</h3>", unsafe_allow_html=True)
+# ---------------- Title ----------------
+
+st.markdown(
+    "<h1 style='text-align:center; color:white;'>FAKEPROOF: DETECTS DEEPFAKE VIDEOS</h1>",
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    "<h3 style='text-align:center; color:#f1c40f; font-weight:bold;'>AI vs AI: Fighting deception with detection</h3>",
+    unsafe_allow_html=True
+)
 
 st.write("")
 st.write("")
 
-col1, col2, col3 = st.columns([1,2,1])
+# ---------------- Main Layout ----------------
+
+col1, col2, col3 = st.columns([1, 2, 1])
 
 with col2:
-    st.markdown("### Upload Your Video")
+
+    st.markdown(
+        "<div style='background-color:#f4f4f4; padding:25px; border-radius:12px; text-align:center;'>",
+        unsafe_allow_html=True
+    )
+
+    st.markdown("<h3 style='color:black;'>Upload Your Video</h3>", unsafe_allow_html=True)
 
     uploaded_file = st.file_uploader("", type=["mp4", "avi", "mov"])
 
     if uploaded_file:
-        # Save uploaded video to temp file
         tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(uploaded_file.read())
 
-        # Show video preview
         st.video(uploaded_file)
 
-        # Detect button
         if st.button("Detect Deepfake"):
+
             with st.spinner("Analyzing video... Please wait"):
+
                 frames = load_video(tfile.name)
                 frame_features, frame_mask = prepare_single_video(frames)
 
                 prediction = model.predict([frame_features, frame_mask], verbose=0)[0][0]
 
+                os.unlink(tfile.name)
+
+                # Prediction Logic
                 if prediction >= 0.51:
                     result = "FAKE"
                     confidence = round(float(prediction), 2)
-                    st.markdown(f"<h3 style='color:#e74c3c;'>Result: {result}</h3>", unsafe_allow_html=True)
+                    st.markdown(
+                        f"<h3 style='color:#e74c3c;'>Result: {result}</h3>",
+                        unsafe_allow_html=True
+                    )
                 else:
                     result = "REAL"
                     confidence = round(1 - float(prediction), 2)
-                    st.markdown(f"<h3 style='color:#2ecc71;'>Result: {result}</h3>", unsafe_allow_html=True)
+                    st.markdown(
+                        f"<h3 style='color:#2ecc71;'>Result: {result}</h3>",
+                        unsafe_allow_html=True
+                    )
 
-                st.markdown(f"<h4>Confidence: {confidence}</h4>", unsafe_allow_html=True)
+                st.markdown(
+                    f"<h4 style='color:black;'>Confidence: {confidence}</h4>",
+                    unsafe_allow_html=True
+                )
 
-        os.unlink(tfile.name)
+    st.markdown("</div>", unsafe_allow_html=True)
