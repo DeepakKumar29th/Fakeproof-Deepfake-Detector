@@ -82,6 +82,7 @@ def prepare_single_video(frames):
 # ---------------- CSS Styling ----------------
 st.markdown("""
 <style>
+
 .stApp {
     background: url("https://raw.githubusercontent.com/DeepakKumar29th/Fakeproof-Deepfake-Detector/main/static/ai_face.png");
     background-size: cover;
@@ -89,11 +90,12 @@ st.markdown("""
     background-repeat: no-repeat;
 }
 
+/* Push everything downward */
 .block-container {
-    padding-top: 40px;
+    padding-top: 120px;
 }
 
-/* Main Title */
+/* Titles */
 .main-title {
     text-align: center;
     color: white;
@@ -101,14 +103,13 @@ st.markdown("""
     font-weight: bold;
 }
 
-/* Subtitle */
 .sub-title {
     text-align: center;
     color: #f1c40f;
     font-size: 20px;
     font-weight: bold;
-    margin-top: 8px;
-    margin-bottom: 30px;
+    margin-top: 10px;
+    margin-bottom: 50px;
 }
 
 /* Upload Card */
@@ -122,15 +123,15 @@ st.markdown("""
     box-shadow: 0 10px 25px rgba(0,0,0,0.35);
 }
 
-/* Upload title white */
+/* Upload title */
 .upload-title {
-    color: white;
+    color: black;
     font-size: 20px;
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
 }
 
-/* Result colors */
+/* Result text */
 .result-real {
     color: #2ecc71;
     font-size: 22px;
@@ -147,7 +148,15 @@ st.markdown("""
     color: black;
     font-size: 18px;
     font-weight: bold;
+    margin-top: 5px;
 }
+
+/* Center file uploader */
+[data-testid="stFileUploader"] {
+    display: flex;
+    justify-content: center;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -168,7 +177,7 @@ if uploaded_file:
     st.video(uploaded_file)
 
     if st.button("Detect Deepfake"):
-        with st.spinner("Analyzing video... Please wait"):
+        with st.spinner("Analyzing video... Please wait..."):
 
             frames = load_video(temp_file.name)
             frame_features, frame_mask = prepare_single_video(frames)
