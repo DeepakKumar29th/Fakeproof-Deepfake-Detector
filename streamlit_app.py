@@ -155,14 +155,22 @@ label[data-testid="stWidgetLabel"] {
     display: none;
 }
 
-/* Result + Confidence in white */
-.result-text {
-    color: white;
+/* Result Colors */
+.result-real {
+    color: #2ecc71;
     font-size: 22px;
     font-weight: bold;
     margin-top: 18px;
 }
 
+.result-fake {
+    color: #e74c3c;
+    font-size: 22px;
+    font-weight: bold;
+    margin-top: 18px;
+}
+
+/* Confidence text white */
 .conf-text {
     color: white;
     font-size: 18px;
@@ -198,13 +206,12 @@ if uploaded_file:
             os.unlink(temp_file.name)
 
             if prediction >= 0.51:
-                result = "FAKE"
+                st.markdown("<div class='result-fake'>Result: FAKE</div>", unsafe_allow_html=True)
+                confidence = round(float(prediction), 2)
             else:
-                result = "REAL"
+                st.markdown("<div class='result-real'>Result: REAL</div>", unsafe_allow_html=True)
+                confidence = round(1 - float(prediction), 2)
 
-            confidence = round(float(prediction if prediction >= 0.51 else 1 - prediction), 2)
-
-            st.markdown(f"<div class='result-text'>Result: {result}</div>", unsafe_allow_html=True)
             st.markdown(f"<div class='conf-text'>Confidence: {confidence}</div>", unsafe_allow_html=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
