@@ -6,7 +6,10 @@ import os
 import tempfile
 
 # ---------------- Page Config ----------------
-st.set_page_config(page_title="FakeProof - Deepfake Detection", layout="wide")
+st.set_page_config(
+    page_title="FakeProof - Deepfake Detection",
+    layout="wide"
+)
 
 # ---------------- Load Model ----------------
 @st.cache_resource
@@ -86,25 +89,32 @@ st.markdown("""
     background-repeat: no-repeat;
 }
 
+.block-container {
+    padding-top: 40px;
+}
+
+/* Main Title */
 .main-title {
     text-align: center;
     color: white;
     font-size: 42px;
     font-weight: bold;
-    margin-top: 40px;
 }
 
+/* Subtitle */
 .sub-title {
     text-align: center;
     color: #f1c40f;
     font-size: 20px;
     font-weight: bold;
+    margin-top: 8px;
     margin-bottom: 30px;
 }
 
+/* Upload Card */
 .upload-card {
     background-color: #f4f4f4;
-    padding: 25px;
+    padding: 25px 30px;
     border-radius: 14px;
     text-align: center;
     width: 480px;
@@ -112,6 +122,15 @@ st.markdown("""
     box-shadow: 0 10px 25px rgba(0,0,0,0.35);
 }
 
+/* Upload title white */
+.upload-title {
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+/* Result colors */
 .result-real {
     color: #2ecc71;
     font-size: 22px;
@@ -138,9 +157,9 @@ st.markdown("<div class='sub-title'>AI vs AI: Fighting deception with detection<
 
 # ---------------- Upload Card ----------------
 st.markdown("<div class='upload-card'>", unsafe_allow_html=True)
-st.markdown("<h3 style='color:black;'>Upload Your Video</h3>", unsafe_allow_html=True)
+st.markdown("<div class='upload-title'>Upload Your Video</div>", unsafe_allow_html=True)
 
-uploaded_file = st.file_uploader("", type=["mp4","avi","mov"])
+uploaded_file = st.file_uploader("", type=["mp4", "avi", "mov"])
 
 if uploaded_file:
     temp_file = tempfile.NamedTemporaryFile(delete=False)
@@ -154,7 +173,6 @@ if uploaded_file:
             frames = load_video(temp_file.name)
             frame_features, frame_mask = prepare_single_video(frames)
             prediction = model.predict([frame_features, frame_mask], verbose=0)[0][0]
-
             os.unlink(temp_file.name)
 
             if prediction >= 0.51:
