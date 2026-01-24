@@ -6,10 +6,7 @@ import os
 import tempfile
 
 # ---------------- Page Config ----------------
-st.set_page_config(
-    page_title="FakeProof - Deepfake Detection",
-    layout="wide"
-)
+st.set_page_config(page_title="FakeProof - Deepfake Detection", layout="wide")
 
 # ---------------- Load Model ----------------
 @st.cache_resource
@@ -40,7 +37,7 @@ def build_feature_extractor():
 
 feature_extractor = build_feature_extractor()
 
-# ---------------- Video Processing ----------------
+# ---------------- Video Utilities ----------------
 def crop_center_square(frame):
     y, x = frame.shape[0:2]
     min_dim = min(y, x)
@@ -79,7 +76,7 @@ def prepare_single_video(frames):
 
     return frame_features, frame_mask
 
-# ---------------- Background Styling ----------------
+# ---------------- CSS Styling ----------------
 st.markdown("""
 <style>
 .stApp {
@@ -88,68 +85,85 @@ st.markdown("""
     background-position: center right;
     background-repeat: no-repeat;
 }
-.main-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 80vh;
-}
-.upload-card {
-    background: #f4f4f4;
-    padding: 25px 30px;
-    border-radius: 14px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.35);
-    text-align: center;
-    width: 480px;
-}
-.title-text {
+
+.main-title {
     text-align: center;
     color: white;
+    font-size: 42px;
+    font-weight: bold;
     margin-top: 40px;
 }
-.subtitle-text {
+
+.sub-title {
     text-align: center;
     color: #f1c40f;
+    font-size: 20px;
     font-weight: bold;
     margin-bottom: 30px;
+}
+
+.upload-card {
+    background-color: #f4f4f4;
+    padding: 25px;
+    border-radius: 14px;
+    text-align: center;
+    width: 480px;
+    margin: auto;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+}
+
+.result-real {
+    color: #2ecc71;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.result-fake {
+    color: #e74c3c;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.conf-text {
+    color: black;
+    font-size: 18px;
+    font-weight: bold;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # ---------------- Titles ----------------
-st.markdown("<h1 class='title-text'>FAKEPROOF: DETECTS DEEPFAKE VIDEOS</h1>", unsafe_allow_html=True)
-st.markdown("<h3 class='subtitle-text'>AI vs AI: Fighting deception with detection</h3>", unsafe_allow_html=True)
+st.markdown("<div class='main-title'>FAKEPROOF: DETECTS DEEPFAKE VIDEOS</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-title'>AI vs AI: Fighting deception with detection</div>", unsafe_allow_html=True)
 
-# ---------------- Main Card ----------------
-st.markdown("<div class='main-container'><div class='upload-card'>", unsafe_allow_html=True)
-
+# ---------------- Upload Card ----------------
+st.markdown("<div class='upload-card'>", unsafe_allow_html=True)
 st.markdown("<h3 style='color:black;'>Upload Your Video</h3>", unsafe_allow_html=True)
 
 uploaded_file = st.file_uploader("", type=["mp4","avi","mov"])
 
 if uploaded_file:
-    tfile = tempfile.NamedTemporaryFile(delete=False)
-    tfile.write(uploaded_file.read())
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    temp_file.write(uploaded_file.read())
 
-    # Clean video display (no overlay text issue anymore)
     st.video(uploaded_file)
 
     if st.button("Detect Deepfake"):
-        with st.spinner("Analyzing video..."):
-            frames = load_video(tfile.name)
+        with st.spinner("Analyzing video... Please wait"):
+
+            frames = load_video(temp_file.name)
             frame_features, frame_mask = prepare_single_video(frames)
             prediction = model.predict([frame_features, frame_mask], verbose=0)[0][0]
-            os.unlink(tfile.name)
+
+            os.unlink(temp_file.name)
 
             if prediction >= 0.51:
-                result = "FAKE"
+                st.markdown("<div class='result-fake'>Result: FAKE</div>", unsafe_allow_html=True)
                 confidence = round(float(prediction), 2)
-                st.markdown(f"<h3 style='color:#e74c3c;'>Result: {result}</h3>", unsafe_allow_html=True)
             else:
-                result = "REAL"
+                st.markdown("<div class='result-real'>Result: REAL</div>", unsafe_allow_html=True)
                 confidence = round(1 - float(prediction), 2)
-                st.markdown(f"<h3 style='color:#2ecc71;'>Result: {result}</h3>", unsafe_allow_html=True)
 
-            st.markdown(f"<h4 style='color:black;'>Confidence: {confidence}</h4>", unsafe_allow_html=True)
+            st.markdown(f"<div class='conf-text'>Confidence: {confidence}</div>", unsafe_allow_html=True)
 
-st.markdown("</div></div>", unsafe_allow_html=True)
+st.markdown("</div>", unsafe_allow_html=True)
