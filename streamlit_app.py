@@ -83,6 +83,7 @@ def prepare_single_video(frames):
 st.markdown("""
 <style>
 
+/* Background */
 .stApp {
     background: url("https://raw.githubusercontent.com/DeepakKumar29th/Fakeproof-Deepfake-Detector/main/static/ai_face.png");
     background-size: cover;
@@ -109,52 +110,64 @@ st.markdown("""
     font-size: 20px;
     font-weight: bold;
     margin-top: 10px;
-    margin-bottom: 50px;
+    margin-bottom: 45px;
 }
 
 /* Upload Card */
 .upload-card {
-    background-color: #f4f4f4;
-    padding: 25px 30px;
+    background-color: rgba(0,0,0,0.65);
+    padding: 30px 35px;
     border-radius: 14px;
     text-align: center;
-    width: 480px;
+    width: 520px;
     margin: auto;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.45);
 }
 
-/* Upload title */
+/* Upload title white rectangle */
 .upload-title {
-    color: black;
-    font-size: 20px;
-    font-weight: bold;
-    margin-bottom: 15px;
-}
-
-/* Result text */
-.result-real {
-    color: #2ecc71;
-    font-size: 22px;
-    font-weight: bold;
-}
-
-.result-fake {
-    color: #e74c3c;
-    font-size: 22px;
-    font-weight: bold;
-}
-
-.conf-text {
+    background: white;
     color: black;
     font-size: 18px;
     font-weight: bold;
-    margin-top: 5px;
+    padding: 8px 18px;
+    border-radius: 6px;
+    display: inline-block;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
 
-/* Center file uploader */
-[data-testid="stFileUploader"] {
-    display: flex;
-    justify-content: center;
+/* Remove default Streamlit uploader box */
+div[data-testid="stFileUploader"] > section {
+    background: transparent !important;
+    border: 2px dashed rgba(255,255,255,0.4) !important;
+    border-radius: 10px !important;
+    padding: 18px !important;
+}
+
+/* Uploader text color */
+div[data-testid="stFileUploader"] * {
+    color: white !important;
+}
+
+/* Hide default label */
+label[data-testid="stWidgetLabel"] {
+    display: none;
+}
+
+/* Result + Confidence in white */
+.result-text {
+    color: white;
+    font-size: 22px;
+    font-weight: bold;
+    margin-top: 18px;
+}
+
+.conf-text {
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 4px;
 }
 
 </style>
@@ -168,7 +181,7 @@ st.markdown("<div class='sub-title'>AI vs AI: Fighting deception with detection<
 st.markdown("<div class='upload-card'>", unsafe_allow_html=True)
 st.markdown("<div class='upload-title'>Upload Your Video</div>", unsafe_allow_html=True)
 
-uploaded_file = st.file_uploader("", type=["mp4", "avi", "mov"])
+uploaded_file = st.file_uploader("", type=["mp4","avi","mov"])
 
 if uploaded_file:
     temp_file = tempfile.NamedTemporaryFile(delete=False)
@@ -177,7 +190,7 @@ if uploaded_file:
     st.video(uploaded_file)
 
     if st.button("Detect Deepfake"):
-        with st.spinner("Analyzing video... Please wait..."):
+        with st.spinner("Analyzing video... Please wait"):
 
             frames = load_video(temp_file.name)
             frame_features, frame_mask = prepare_single_video(frames)
@@ -185,12 +198,13 @@ if uploaded_file:
             os.unlink(temp_file.name)
 
             if prediction >= 0.51:
-                st.markdown("<div class='result-fake'>Result: FAKE</div>", unsafe_allow_html=True)
-                confidence = round(float(prediction), 2)
+                result = "FAKE"
             else:
-                st.markdown("<div class='result-real'>Result: REAL</div>", unsafe_allow_html=True)
-                confidence = round(1 - float(prediction), 2)
+                result = "REAL"
 
+            confidence = round(float(prediction if prediction >= 0.51 else 1 - prediction), 2)
+
+            st.markdown(f"<div class='result-text'>Result: {result}</div>", unsafe_allow_html=True)
             st.markdown(f"<div class='conf-text'>Confidence: {confidence}</div>", unsafe_allow_html=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
