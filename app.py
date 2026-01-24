@@ -6,15 +6,20 @@ import os
 
 app = Flask(__name__)
 
-# Load the pre-trained model
-model = tf.keras.models.load_model('./model/deepfake_video_model.h5')
+# ---------------- Load Model ----------------
 
-# Define constants
+model = tf.keras.models.load_model(
+    "./model/deepfake_video_model.h5",
+    compile=False
+)
+
+# ---------------- Constants ----------------
+
 IMG_SIZE = 224
 MAX_SEQ_LENGTH = 20
 NUM_FEATURES = 2048
 
-# ===================== Feature Extractor =====================
+# ---------------- Feature Extractor ----------------
 
 def build_feature_extractor():
     feature_extractor = tf.keras.applications.InceptionV3(
@@ -33,7 +38,7 @@ def build_feature_extractor():
 
 feature_extractor = build_feature_extractor()
 
-# ===================== Video Processing =====================
+# ---------------- Utility Functions ----------------
 
 def crop_center_square(frame):
     y, x = frame.shape[0:2]
@@ -54,7 +59,7 @@ def load_video(path, max_frames=MAX_SEQ_LENGTH, resize=(IMG_SIZE, IMG_SIZE)):
 
             frame = crop_center_square(frame)
             frame = cv2.resize(frame, resize)
-            frame = frame[:, :, [2, 1, 0]]  # BGR → RGB
+            frame = frame[:, :, [2, 1, 0]]
             frames.append(frame)
 
             if len(frames) == max_frames:
@@ -66,21 +71,23 @@ def load_video(path, max_frames=MAX_SEQ_LENGTH, resize=(IMG_SIZE, IMG_SIZE)):
 
 def prepare_single_video(frames):
     frames = frames[None, ...]
-    frame_mask = np.zeros(shape=(1, MAX_SEQ_LENGTH), dtype="bool")
-    frame_features = np.zeros(shape=(1, MAX_SEQ_LENGTH, NUM_FEATURES), dtype="float32")
+    frame_mask = np.zeros((1, MAX_SEQ_LENGTH), dtype="bool")
+    frame_features = np.zeros((1, MAX_SEQ_LENGTH, NUM_FEATURES), dtype="float32")
 
     for i, batch in enumerate(frames):
         video_length = batch.shape[0]
         length = min(MAX_SEQ_LENGTH, video_length)
 
         for j in range(length):
-            frame_features[i, j, :] = feature_extractor.predict(batch[None, j, :], verbose=0)
+            frame_features[i, j, :] = feature_extractor.predict(
+                batch[None, j, :], verbose=0
+            )
 
         frame_mask[i, :length] = 1
 
     return frame_features, frame_mask
 
-# ===================== Routes =====================
+# ---------------- Routes ----------------
 
 @app.route('/')
 def home():
@@ -92,22 +99,16 @@ def predict():
         return jsonify({'error': 'No video file provided'}), 400
 
     video = request.files['video']
-
-    if video.filename == '':
-        return jsonify({'error': 'No selected video'}), 400
-
-    # Save uploaded video
     video_path = os.path.join("uploads", video.filename)
     video.save(video_path)
 
-    # Process video
     frames = load_video(video_path)
     frame_features, frame_mask = prepare_single_video(frames)
 
-    # Predict
     prediction = model.predict([frame_features, frame_mask], verbose=0)[0][0]
 
-    # Apply label + rounded confidence
+    os.remove(video_path)
+
     if prediction >= 0.51:
         result = "FAKE"
         confidence = round(float(prediction), 2)
@@ -115,15 +116,12 @@ def predict():
         result = "REAL"
         confidence = round(1 - float(prediction), 2)
 
-    # Remove uploaded file after prediction
-    os.remove(video_path)
-
     return jsonify({'result': result, 'confidence': confidence})
 
-# ===================== Main =====================
+# ---------------- Run App ----------------
 
 if __name__ == '__main__':
     if not os.path.exists('uploads'):
         os.makedirs('uploads')
 
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=10000)
