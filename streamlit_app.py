@@ -6,24 +6,31 @@ import os
 import tempfile
 
 # ---------------- Page Config ----------------
+
 st.set_page_config(
     page_title="FakeProof - Deepfake Detection",
     layout="wide"
 )
 
 # ---------------- Load Model ----------------
+
 @st.cache_resource
 def load_trained_model():
-    return tf.keras.models.load_model("model/deepfake_video_model.h5", compile=False)
+    return tf.keras.models.load_model(
+        "model/deepfake_video_model.h5",
+        compile=False
+    )
 
 model = load_trained_model()
 
 # ---------------- Constants ----------------
+
 IMG_SIZE = 224
 MAX_SEQ_LENGTH = 20
 NUM_FEATURES = 2048
 
 # ---------------- Feature Extractor ----------------
+
 @st.cache_resource
 def build_feature_extractor():
     feature_extractor = tf.keras.applications.InceptionV3(
@@ -33,14 +40,17 @@ def build_feature_extractor():
         input_shape=(IMG_SIZE, IMG_SIZE, 3),
     )
     preprocess_input = tf.keras.applications.inception_v3.preprocess_input
+
     inputs = tf.keras.Input((IMG_SIZE, IMG_SIZE, 3))
     preprocessed = preprocess_input(inputs)
     outputs = feature_extractor(preprocessed)
+
     return tf.keras.Model(inputs, outputs)
 
 feature_extractor = build_feature_extractor()
 
-# ---------------- Video Utilities ----------------
+# ---------------- Video Processing ----------------
+
 def crop_center_square(frame):
     y, x = frame.shape[0:2]
     min_dim = min(y, x)
@@ -80,8 +90,11 @@ def prepare_single_video(frames):
     return frame_features, frame_mask
 
 # ---------------- CSS Styling ----------------
+
 st.markdown("""
 <style>
+
+/* Background */
 .stApp {
     background: url("https://raw.githubusercontent.com/DeepakKumar29th/Fakeproof-Deepfake-Detector/main/static/ai_face.png");
     background-size: cover;
@@ -89,11 +102,12 @@ st.markdown("""
     background-repeat: no-repeat;
 }
 
+/* Push content downward */
 .block-container {
-    padding-top: 40px;
+    padding-top: 90px;
 }
 
-/* Main Title */
+/* Title */
 .main-title {
     text-align: center;
     color: white;
@@ -108,80 +122,116 @@ st.markdown("""
     font-size: 20px;
     font-weight: bold;
     margin-top: 8px;
-    margin-bottom: 30px;
+    margin-bottom: 40px;
 }
 
 /* Upload Card */
 .upload-card {
-    background-color: #f4f4f4;
-    padding: 25px 30px;
+    background-color: rgba(0, 0, 0, 0.65);
+    padding: 30px 35px;
     border-radius: 14px;
     text-align: center;
-    width: 480px;
+    width: 520px;
     margin: auto;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.45);
 }
 
-/* Upload title white */
+/* Upload Title */
 .upload-title {
     color: white;
     font-size: 20px;
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
 }
 
-/* Result colors */
-.result-real {
-    color: #2ecc71;
+/* Remove default white box of uploader */
+div[data-testid="stFileUploader"] > section {
+    background: transparent !important;
+    border: 2px dashed rgba(255,255,255,0.35) !important;
+    border-radius: 10px !important;
+    padding: 18px !important;
+}
+
+/* Text inside uploader */
+div[data-testid="stFileUploader"] * {
+    color: white !important;
+}
+
+/* Hide default label */
+label[data-testid="stWidgetLabel"] {
+    display: none;
+}
+
+/* Video frame */
+video {
+    border-radius: 8px;
+    margin-top: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+/* Detect Button */
+.stButton>button {
+    background-color: #2196f3;
+    color: white;
+    border-radius: 20px;
+    padding: 8px 26px;
+    font-size: 15px;
+    border: none;
+    margin-top: 15px;
+}
+
+/* Result text */
+.result-text {
+    color: white;
     font-size: 22px;
     font-weight: bold;
+    margin-top: 18px;
 }
 
-.result-fake {
-    color: #e74c3c;
-    font-size: 22px;
-    font-weight: bold;
-}
-
+/* Confidence text */
 .conf-text {
-    color: black;
+    color: white;
     font-size: 18px;
     font-weight: bold;
+    margin-top: 4px;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
 # ---------------- Titles ----------------
+
 st.markdown("<div class='main-title'>FAKEPROOF: DETECTS DEEPFAKE VIDEOS</div>", unsafe_allow_html=True)
 st.markdown("<div class='sub-title'>AI vs AI: Fighting deception with detection</div>", unsafe_allow_html=True)
 
-# ---------------- Upload Card ----------------
+# ---------------- Upload UI ----------------
+
 st.markdown("<div class='upload-card'>", unsafe_allow_html=True)
 st.markdown("<div class='upload-title'>Upload Your Video</div>", unsafe_allow_html=True)
 
-uploaded_file = st.file_uploader("", type=["mp4", "avi", "mov"])
+uploaded_file = st.file_uploader("", type=["mp4","avi","mov","mpeg4"])
 
 if uploaded_file:
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
-    temp_file.write(uploaded_file.read())
+    tfile = tempfile.NamedTemporaryFile(delete=False)
+    tfile.write(uploaded_file.read())
 
     st.video(uploaded_file)
 
     if st.button("Detect Deepfake"):
-        with st.spinner("Analyzing video... Please wait"):
-
-            frames = load_video(temp_file.name)
+        with st.spinner("Analyzing video..."):
+            frames = load_video(tfile.name)
             frame_features, frame_mask = prepare_single_video(frames)
             prediction = model.predict([frame_features, frame_mask], verbose=0)[0][0]
-            os.unlink(temp_file.name)
+            os.unlink(tfile.name)
 
             if prediction >= 0.51:
-                st.markdown("<div class='result-fake'>Result: FAKE</div>", unsafe_allow_html=True)
+                result = "FAKE"
                 confidence = round(float(prediction), 2)
             else:
-                st.markdown("<div class='result-real'>Result: REAL</div>", unsafe_allow_html=True)
+                result = "REAL"
                 confidence = round(1 - float(prediction), 2)
 
+            st.markdown(f"<div class='result-text'>Result: {result}</div>", unsafe_allow_html=True)
             st.markdown(f"<div class='conf-text'>Confidence: {confidence}</div>", unsafe_allow_html=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
