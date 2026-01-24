@@ -1,8 +1,11 @@
+import os
+# ✅ Force TensorFlow to use Legacy Keras (Fixes GRU time_major error)
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
+
 import streamlit as st
 import numpy as np
 import tensorflow as tf
 import cv2
-import os
 import tempfile
 
 # ---------------- Page Config ----------------
@@ -106,7 +109,7 @@ st.markdown(
     .stApp {
         background: url("https://raw.githubusercontent.com/DeepakKumar29th/Fakeproof-Deepfake-Detector/main/static/ai_face.png");
         background-size: cover;
-        background-position: center right;
+        background-position: center;
         background-repeat: no-repeat;
     }
     </style>
