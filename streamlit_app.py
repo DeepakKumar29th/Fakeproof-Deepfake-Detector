@@ -6,31 +6,24 @@ import os
 import tempfile
 
 # ---------------- Page Config ----------------
-
 st.set_page_config(
     page_title="FakeProof - Deepfake Detection",
     layout="wide"
 )
 
 # ---------------- Load Model ----------------
-
 @st.cache_resource
 def load_trained_model():
-    return tf.keras.models.load_model(
-        "model/deepfake_video_model.h5",
-        compile=False
-    )
+    return tf.keras.models.load_model("model/deepfake_video_model.h5", compile=False)
 
 model = load_trained_model()
 
 # ---------------- Constants ----------------
-
 IMG_SIZE = 224
 MAX_SEQ_LENGTH = 20
 NUM_FEATURES = 2048
 
 # ---------------- Feature Extractor ----------------
-
 @st.cache_resource
 def build_feature_extractor():
     feature_extractor = tf.keras.applications.InceptionV3(
@@ -40,17 +33,14 @@ def build_feature_extractor():
         input_shape=(IMG_SIZE, IMG_SIZE, 3),
     )
     preprocess_input = tf.keras.applications.inception_v3.preprocess_input
-
     inputs = tf.keras.Input((IMG_SIZE, IMG_SIZE, 3))
     preprocessed = preprocess_input(inputs)
     outputs = feature_extractor(preprocessed)
-
     return tf.keras.Model(inputs, outputs)
 
 feature_extractor = build_feature_extractor()
 
 # ---------------- Video Processing ----------------
-
 def crop_center_square(frame):
     y, x = frame.shape[0:2]
     min_dim = min(y, x)
@@ -90,66 +80,76 @@ def prepare_single_video(frames):
     return frame_features, frame_mask
 
 # ---------------- Background Styling ----------------
+st.markdown("""
+<style>
+.stApp {
+    background: url("https://raw.githubusercontent.com/DeepakKumar29th/Fakeproof-Deepfake-Detector/main/static/ai_face.png");
+    background-size: cover;
+    background-position: center right;
+    background-repeat: no-repeat;
+}
+.main-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 80vh;
+}
+.upload-card {
+    background: #f4f4f4;
+    padding: 25px 30px;
+    border-radius: 14px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+    text-align: center;
+    width: 480px;
+}
+.title-text {
+    text-align: center;
+    color: white;
+    margin-top: 40px;
+}
+.subtitle-text {
+    text-align: center;
+    color: #f1c40f;
+    font-weight: bold;
+    margin-bottom: 30px;
+}
+</style>
+""", unsafe_allow_html=True)
 
-st.markdown(
-    """
-    <style>
-    .stApp {
-        background: url("https://raw.githubusercontent.com/DeepakKumar29th/Fakeproof-Deepfake-Detector/main/static/ai_face.png");
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+# ---------------- Titles ----------------
+st.markdown("<h1 class='title-text'>FAKEPROOF: DETECTS DEEPFAKE VIDEOS</h1>", unsafe_allow_html=True)
+st.markdown("<h3 class='subtitle-text'>AI vs AI: Fighting deception with detection</h3>", unsafe_allow_html=True)
 
-# ---------------- Title ----------------
+# ---------------- Main Card ----------------
+st.markdown("<div class='main-container'><div class='upload-card'>", unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align:center; color:white;'>FAKEPROOF: DETECTS DEEPFAKE VIDEOS</h1>", unsafe_allow_html=True)
-st.markdown("<h3 style='text-align:center; color:#f1c40f; font-weight:bold;'>AI vs AI: Fighting deception with detection</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='color:black;'>Upload Your Video</h3>", unsafe_allow_html=True)
 
-st.write("")
-st.write("")
+uploaded_file = st.file_uploader("", type=["mp4","avi","mov"])
 
-# ---------------- UI Layout ----------------
+if uploaded_file:
+    tfile = tempfile.NamedTemporaryFile(delete=False)
+    tfile.write(uploaded_file.read())
 
-col1, col2, col3 = st.columns([1,2,1])
+    # Clean video display (no overlay text issue anymore)
+    st.video(uploaded_file)
 
-with col2:
-    st.markdown(
-        "<div style='background-color:#f4f4f4; padding:25px; border-radius:12px; text-align:center;'>",
-        unsafe_allow_html=True
-    )
+    if st.button("Detect Deepfake"):
+        with st.spinner("Analyzing video..."):
+            frames = load_video(tfile.name)
+            frame_features, frame_mask = prepare_single_video(frames)
+            prediction = model.predict([frame_features, frame_mask], verbose=0)[0][0]
+            os.unlink(tfile.name)
 
-    st.markdown("<h3 style='color:black;'>Upload Your Video</h3>", unsafe_allow_html=True)
+            if prediction >= 0.51:
+                result = "FAKE"
+                confidence = round(float(prediction), 2)
+                st.markdown(f"<h3 style='color:#e74c3c;'>Result: {result}</h3>", unsafe_allow_html=True)
+            else:
+                result = "REAL"
+                confidence = round(1 - float(prediction), 2)
+                st.markdown(f"<h3 style='color:#2ecc71;'>Result: {result}</h3>", unsafe_allow_html=True)
 
-    uploaded_file = st.file_uploader("", type=["mp4","avi","mov"])
+            st.markdown(f"<h4 style='color:black;'>Confidence: {confidence}</h4>", unsafe_allow_html=True)
 
-    if uploaded_file:
-        tfile = tempfile.NamedTemporaryFile(delete=False)
-        tfile.write(uploaded_file.read())
-
-        st.video(uploaded_file)
-
-        if st.button("Detect Deepfake"):
-            with st.spinner("Analyzing video... Please wait"):
-
-                frames = load_video(tfile.name)
-                frame_features, frame_mask = prepare_single_video(frames)
-                prediction = model.predict([frame_features, frame_mask], verbose=0)[0][0]
-                os.unlink(tfile.name)
-
-                if prediction >= 0.51:
-                    result = "FAKE"
-                    confidence = round(float(prediction), 2)
-                    st.markdown(f"<h3 style='color:#e74c3c;'>Result: {result}</h3>", unsafe_allow_html=True)
-                else:
-                    result = "REAL"
-                    confidence = round(1 - float(prediction), 2)
-                    st.markdown(f"<h3 style='color:#2ecc71;'>Result: {result}</h3>", unsafe_allow_html=True)
-
-                st.markdown(f"<h4 style='color:black;'>Confidence: {confidence}</h4>", unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
+st.markdown("</div></div>", unsafe_allow_html=True)
