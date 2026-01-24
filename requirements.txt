@@ -1,5 +1,4 @@
-Flask==2.3.3
+streamlit
 tensorflow==2.13.0
-numpy
 opencv-python-headless
-gunicorn
+numpy
